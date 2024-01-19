@@ -78,6 +78,15 @@ class PageTargetSession {
 
 } // namespace
 
+// @nocommit
+
+/**
+ * @cdp Runtime.enable is an interesting case
+ */
+
+// TODO: implement @cdp Runtime.enable
+
+// @cdp Runtime.consoleAPICalled
 std::unique_ptr<ILocalConnection> PageTarget::connect(
     std::unique_ptr<IRemoteConnection> connectionToFrontend,
     SessionMetadata sessionMetadata) {
