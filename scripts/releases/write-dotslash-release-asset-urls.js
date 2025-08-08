@@ -14,7 +14,9 @@ const {
   dangerouslyResignGeneratedFile,
   processDotSlashFileInPlace,
   validateAndParseDotSlashFile,
+  validateDotSlashArtifactData,
 } = require('./utils/dotslash-utils');
+const {getWithCurl} = require('./utils/curl-utils');
 const {REPO_ROOT} = require('../shared/consts');
 const {parseArgs, styleText} = require('util');
 const path = require('path');
@@ -63,26 +65,45 @@ async function writeReleaseAssetUrlsToDotSlashFiles(
   for (const filename of FIRST_PARTY_DOTSLASH_FILES) {
     const fullPath = path.join(REPO_ROOT, filename);
     console.log(`Updating ${filename}...`);
+    const upstreamProviderValidationPromises = [];
     await processDotSlashFileInPlace(
       fullPath,
-      (providers, suggestedFilename) => {
+      (providers, suggestedFilename, artifactInfo) => {
+        let upstreamHttpProvidersCount = 0;
         providers = providers.filter(provider => {
-          // Remove any existing release asset URLs
-          if (
-            (provider.type === 'http' || provider.type == null) &&
-            provider.url.startsWith(
-              'https://github.com/facebook/react-native/releases/download/',
-            )
-          ) {
-            console.log(styleText('red', `  -${provider.url}`));
-            return false;
+          if (provider.type === 'http' || provider.type == null) {
+            if (
+              // Remove any existing release asset URLs
+              provider.url.startsWith(
+                'https://github.com/facebook/react-native/releases/download/',
+              )
+            ) {
+              console.log(styleText('red', `  -${provider.url}`));
+              return false;
+            }
+            console.log(styleText('dim', `   ${provider.url}`));
+            upstreamProviderValidationPromises.push(
+              (async () => {
+                console.log(
+                  `Downloading from ${provider.url} for integrity validation...`,
+                );
+                const {data} = await getWithCurl(provider.url);
+                await validateDotSlashArtifactData(data, artifactInfo);
+              })(),
+            );
+            ++upstreamHttpProvidersCount;
+            return true;
           }
-          console.log(styleText('dim', `   ${provider.url}`));
+          // Keep all other providers, though we can't validate them nor use them
+          // in upload-release-assets-for-dotslash.
+          console.log(
+            styleText('dim', `   <provider of type: ${provider.type}>`),
+          );
           return true;
         });
-        if (providers.length === 0) {
+        if (upstreamHttpProvidersCount === 0) {
           throw new Error(
-            'No usable providers found for asset:',
+            'No upstream HTTP providers found for asset:',
             suggestedFilename,
           );
         }
@@ -95,6 +116,7 @@ async function writeReleaseAssetUrlsToDotSlashFiles(
         return providers;
       },
     );
+    await Promise.all(upstreamProviderValidationPromises);
     await dangerouslyResignGeneratedFile(fullPath);
     await validateAndParseDotSlashFile(fullPath);
   }
