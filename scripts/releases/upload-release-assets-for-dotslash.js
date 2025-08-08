@@ -185,7 +185,9 @@ async function uploadReleaseAssetsForDotSlash(
               console.log(
                 `[${targetReleaseAssetInfo.name}] Uploading to release...`,
               );
-              await octokit.repos.uploadReleaseAsset({
+              const {
+                data: {browser_download_url},
+              } = await octokit.repos.uploadReleaseAsset({
                 owner: 'facebook',
                 repo: 'react-native',
                 release_id: releaseId,
@@ -196,6 +198,19 @@ async function uploadReleaseAssetsForDotSlash(
                     headers['content-type'] ?? 'application/octet-stream',
                 },
               });
+              const actualUrlPathname = new URL(browser_download_url).pathname;
+              const actualAssetName = decodeURIComponent(
+                /[^/]*$/.exec(actualUrlPathname)[0],
+              );
+              if (actualAssetName !== targetReleaseAssetInfo.name) {
+                throw new Error(
+                  `Asset name was changed while uploading to the draft release: expected ${targetReleaseAssetInfo.name}, got ${actualAssetName}. ` +
+                    `${filename} has already been published with the following URL, which will not work when the release is published: ${targetReleaseAssetInfo.url}`,
+                );
+              }
+              console.log(
+                `[${targetReleaseAssetInfo.name}] Uploaded to ${browser_download_url}`,
+              );
             }
           })(),
         );
