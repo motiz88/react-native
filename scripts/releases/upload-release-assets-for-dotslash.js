@@ -21,6 +21,7 @@ const {Octokit} = require('@octokit/rest');
 const {
   FIRST_PARTY_DOTSLASH_FILES,
 } = require('./write-dotslash-release-asset-urls');
+const {getWithCurl} = require('./utils/curl-utils');
 
 const config = {
   allowPositionals: true,
@@ -166,14 +167,9 @@ async function uploadReleaseAssetsForDotSlash(
             console.log(
               `[${targetReleaseAssetInfo.name}] Downloading from ${upstreamUrl}...`,
             );
-            const response = await fetch(upstreamUrl);
-            if (!response.ok) {
-              throw new Error(
-                `Failed to download ${upstreamUrl}: ${response.status} ${response.statusText}`,
-              );
-            }
-            const data = await response.arrayBuffer();
-            const contentType = response.headers.get('content-type');
+            // NOTE: Using curl because we have seen issues with fetch() on GHA
+            // and the Meta CDN. ¯\_(ツ)_/¯
+            const {data, headers} = await getWithCurl(upstreamUrl);
             if (dryRun) {
               console.log(
                 `[${targetReleaseAssetInfo.name}] Dry run: Not uploading to release.`,
@@ -190,7 +186,8 @@ async function uploadReleaseAssetsForDotSlash(
                 name: targetReleaseAssetInfo.name,
                 data,
                 headers: {
-                  'content-type': contentType,
+                  'content-type':
+                    headers['content-type'] ?? 'application/octet-stream',
                 },
               });
             }
