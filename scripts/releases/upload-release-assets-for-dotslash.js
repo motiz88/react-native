@@ -10,19 +10,18 @@
 
 'use strict';
 
-const {
-  validateAndParseDotSlashFile,
-  validateDotSlashArtifactData,
-  processDotSlashFileInPlace,
-} = require('./utils/dotslash-utils');
 const {REPO_ROOT} = require('../shared/consts');
-const {parseArgs} = require('util');
-const path = require('path');
-const {Octokit} = require('@octokit/rest');
+const {getWithCurl} = require('./utils/curl-utils');
+const {
+  processDotSlashFileInPlace,
+  validateDotSlashArtifactData,
+} = require('./utils/dotslash-utils');
 const {
   FIRST_PARTY_DOTSLASH_FILES,
 } = require('./write-dotslash-release-asset-urls');
-const {getWithCurl} = require('./utils/curl-utils');
+const {Octokit} = require('@octokit/rest');
+const path = require('path');
+const {parseArgs} = require('util');
 
 const config = {
   allowPositionals: true,

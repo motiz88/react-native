@@ -10,16 +10,16 @@
 
 'use strict';
 
+const {REPO_ROOT} = require('../shared/consts');
+const {getWithCurl} = require('./utils/curl-utils');
 const {
   dangerouslyResignGeneratedFile,
   processDotSlashFileInPlace,
   validateAndParseDotSlashFile,
   validateDotSlashArtifactData,
 } = require('./utils/dotslash-utils');
-const {getWithCurl} = require('./utils/curl-utils');
-const {REPO_ROOT} = require('../shared/consts');
-const {parseArgs, styleText} = require('util');
 const path = require('path');
+const {parseArgs, styleText} = require('util');
 
 const FIRST_PARTY_DOTSLASH_FILES = [
   'packages/debugger-shell/bin/react-native-devtools',

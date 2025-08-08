@@ -10,8 +10,8 @@
 
 'use strict';
 
-const {promises: fs} = require('fs');
 const spawnAsync = require('@expo/spawn-async');
+const {promises: fs} = require('fs');
 const os = require('os');
 const path = require('path');
 

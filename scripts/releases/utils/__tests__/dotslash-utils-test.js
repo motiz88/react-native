@@ -10,14 +10,12 @@
 
 'use strict';
 
-const fs = require('fs');
-
 const {
-  processDotSlashFileInPlace,
   dangerouslyResignGeneratedFile,
-  validateAndParseDotSlashFile,
+  processDotSlashFileInPlace,
   validateDotSlashArtifactData,
 } = require('../dotslash-utils');
+const fs = require('fs');
 
 jest.useRealTimers();
 

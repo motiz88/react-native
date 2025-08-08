@@ -10,13 +10,13 @@
 
 'use strict';
 
-const {promises: fs} = require('fs');
-const {parse, modify, applyEdits} = require('jsonc-parser');
-const signedsource = require('signedsource');
 const dotslash = require('@motizilberman/dotslash');
-const execFile = require('util').promisify(require('child_process').execFile);
+const {promises: fs} = require('fs');
+const {applyEdits, modify, parse} = require('jsonc-parser');
 const os = require('os');
 const path = require('path');
+const signedsource = require('signedsource');
+const execFile = require('util').promisify(require('child_process').execFile);
 
 /*::
 type DotSlashProvider = {
