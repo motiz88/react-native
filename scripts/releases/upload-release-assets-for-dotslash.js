@@ -12,6 +12,7 @@
 
 const {
   validateAndParseDotSlashFile,
+  validateDotSlashArtifactData,
   processDotSlashFileInPlace,
 } = require('./utils/dotslash-utils');
 const {REPO_ROOT} = require('../shared/consts');
@@ -104,6 +105,7 @@ async function uploadReleaseAssetsForDotSlash(
         providers,
         // NOTE: We mostly ignore suggestedFilename in favour of reading the actual asset URLs
         suggestedFilename,
+        artifactInfo,
       ) => {
         let upstreamUrl, targetReleaseAssetInfo;
         for (const provider of providers) {
@@ -170,6 +172,10 @@ async function uploadReleaseAssetsForDotSlash(
             // NOTE: Using curl because we have seen issues with fetch() on GHA
             // and the Meta CDN. ¯\_(ツ)_/¯
             const {data, headers} = await getWithCurl(upstreamUrl);
+            console.log(
+              `[${targetReleaseAssetInfo.name}] Validating download...`,
+            );
+            await validateDotSlashArtifactData(data, artifactInfo);
             if (dryRun) {
               console.log(
                 `[${targetReleaseAssetInfo.name}] Dry run: Not uploading to release.`,

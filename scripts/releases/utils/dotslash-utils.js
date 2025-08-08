@@ -15,6 +15,8 @@ const {parse, modify, applyEdits} = require('jsonc-parser');
 const signedsource = require('signedsource');
 const dotslash = require('@motizilberman/dotslash');
 const execFile = require('util').promisify(require('child_process').execFile);
+const os = require('os');
+const path = require('path');
 
 /*::
 type DotSlashProvider = {
@@ -27,6 +29,14 @@ type DotSlashProvider = {
   name: string,
 };
 
+type DotSlashPlatformSpec = {
+  providers: DotSlashProvider[],
+  hash: 'blake3' | 'sha256',
+  digest: string,
+  size: number,
+  ...
+}
+
 type JSONCFormattingOptions = {
   tabSize?: number,
   insertSpaces?: boolean,
@@ -36,6 +46,11 @@ type JSONCFormattingOptions = {
 type DotSlashProvidersTransformFn = (
   providers: $ReadOnlyArray<DotSlashProvider>,
   suggestedFilename: string,
+  artifactInfo: $ReadOnlyArray<{
+    hash: 'blake3' | 'sha256',
+    digest: string,
+    size: number,
+  }>
 ) => ?$ReadOnlyArray<DotSlashProvider>;
 */
 
@@ -82,13 +97,17 @@ async function processDotSlashFileInPlace(
     splitShebangFromContents(originalContents);
   const json = parse(originalContentsJson);
   let intermediateContentsJson = originalContentsJson;
-  for (const [platform, platformSpec] of Object.entries(json.platforms)) {
+  for (const [platform, platformSpec] of Object.entries(json.platforms) /*::
+   as $ReadOnlyArray<[string, DotSlashPlatformSpec]>
+  */) {
     const providers = platformSpec.providers;
     const suggestedFilename =
       `${sanitizeFileNameComponent(json.name)}-${platform}` +
       (platformSpec.format ? `.${platformSpec.format}` : '');
+    const {hash, digest, size} = platformSpec;
     const newProviders =
-      transformProviders(providers, suggestedFilename) ?? providers;
+      transformProviders(providers, suggestedFilename, {hash, digest, size}) ??
+      providers;
     if (newProviders !== providers) {
       const edits = modify(
         intermediateContentsJson,
@@ -126,9 +145,43 @@ async function dangerouslyResignGeneratedFile(
   await fs.writeFile(filename, newContents);
 }
 
+async function validateDotSlashArtifactData(
+  data /*: Buffer */,
+  platformSpec /*: $ReadOnly<{
+    digest: string,
+    hash: 'blake3' | 'sha256',
+    size: number,
+    ...
+  }> */,
+) /*: Promise<void> */ {
+  const {digest: expectedDigest, hash, size} = platformSpec;
+  if (data.length !== size) {
+    throw new Error(`size mismatch: expected ${size}, got ${data.length}`);
+  }
+  const hashFunction = hash === 'blake3' ? 'b3sum' : 'sha256';
+
+  const tempDir = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'validate-artifact-hash-'),
+  );
+  try {
+    const tempFile = path.join(tempDir, 'data');
+    await fs.writeFile(tempFile, data);
+    const {stdout} = await execFile(dotslash, ['--', hashFunction, tempFile]);
+    const actualDigest = stdout.trim();
+    if (actualDigest !== expectedDigest) {
+      throw new Error(
+        `${hash} mismatch: expected ${expectedDigest}, got ${actualDigest}`,
+      );
+    }
+  } finally {
+    await fs.rm(tempDir, {recursive: true, force: true});
+  }
+}
+
 module.exports = {
   DEFAULT_FORMATTING_OPTIONS,
   processDotSlashFileInPlace,
   dangerouslyResignGeneratedFile,
   validateAndParseDotSlashFile,
+  validateDotSlashArtifactData,
 };

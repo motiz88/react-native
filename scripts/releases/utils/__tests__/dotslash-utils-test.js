@@ -16,6 +16,7 @@ const {
   processDotSlashFileInPlace,
   dangerouslyResignGeneratedFile,
   validateAndParseDotSlashFile,
+  validateDotSlashArtifactData,
 } = require('../dotslash-utils');
 
 jest.useRealTimers();
@@ -170,5 +171,79 @@ describe('dangerouslyResignGeneratedFile', () => {
   "name": "test",
   "platforms": {}
 }`);
+  });
+});
+
+describe('validateDotSlashArtifactData', () => {
+  test('blake3 success', async () => {
+    await expect(
+      validateDotSlashArtifactData(Buffer.from([]), {
+        hash: 'blake3',
+        digest:
+          'af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262',
+        size: 0,
+      }),
+    ).resolves.toBeUndefined();
+  });
+
+  test('blake3 failure on size mismatch', async () => {
+    await expect(
+      validateDotSlashArtifactData(Buffer.from([]), {
+        hash: 'blake3',
+        digest:
+          'af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262',
+        size: 1,
+      }),
+    ).rejects.toThrowErrorMatchingSnapshot();
+  });
+
+  test('blake3 failure on digest mismatch', async () => {
+    await expect(
+      validateDotSlashArtifactData(Buffer.from([]), {
+        hash: 'blake3',
+        digest:
+          'af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262'
+            .split('')
+            .reverse()
+            .join(''),
+        size: 0,
+      }),
+    ).rejects.toThrowErrorMatchingSnapshot();
+  });
+
+  test('sha256 success', async () => {
+    await expect(
+      validateDotSlashArtifactData(Buffer.from([]), {
+        hash: 'sha256',
+        digest:
+          'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        size: 0,
+      }),
+    ).resolves.toBeUndefined();
+  });
+
+  test('sha256 failure on size mismatch', async () => {
+    await expect(
+      validateDotSlashArtifactData(Buffer.from([]), {
+        hash: 'sha256',
+        digest:
+          'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        size: 1,
+      }),
+    ).rejects.toThrowErrorMatchingSnapshot();
+  });
+
+  test('sha256 failure on digest mismatch', async () => {
+    await expect(
+      validateDotSlashArtifactData(Buffer.from([]), {
+        hash: 'sha256',
+        digest:
+          'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+            .split('')
+            .reverse()
+            .join(''),
+        size: 0,
+      }),
+    ).rejects.toThrowErrorMatchingSnapshot();
   });
 });
