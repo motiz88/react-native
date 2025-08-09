@@ -10,7 +10,6 @@
 
 'use strict';
 
-// $FlowFixMe[untyped-import] TODO(moti): publish types with dotslash package
 const dotslash = require('@motizilberman/dotslash');
 const {promises: fs} = require('fs');
 // $FlowFixMe[untyped-import] TODO: add types for jsonc-parser
