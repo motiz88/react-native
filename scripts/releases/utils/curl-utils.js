@@ -10,6 +10,7 @@
 
 'use strict';
 
+// $FlowFixMe[untyped-import] TODO: add types for @expo/spawn-async
 const spawnAsync = require('@expo/spawn-async');
 const {promises: fs} = require('fs');
 const os = require('os');

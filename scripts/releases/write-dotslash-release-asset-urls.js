@@ -70,7 +70,7 @@ async function writeReleaseAssetUrlsToDotSlashFiles(
       fullPath,
       (providers, suggestedFilename, artifactInfo) => {
         let upstreamHttpProvidersCount = 0;
-        providers = providers.filter(provider => {
+        const mutProviders = providers.filter(provider => {
           if (provider.type === 'http' || provider.type == null) {
             if (
               // Remove any existing release asset URLs
@@ -103,17 +103,17 @@ async function writeReleaseAssetUrlsToDotSlashFiles(
         });
         if (upstreamHttpProvidersCount === 0) {
           throw new Error(
-            'No upstream HTTP providers found for asset:',
+            'No upstream HTTP providers found for asset:' +
             suggestedFilename,
           );
         }
         const url = `https://github.com/facebook/react-native/releases/download/${encodeURIComponent(releaseTag)}/${encodeURIComponent(suggestedFilename)}`;
         console.log(styleText('green', `  +${url}`));
-        providers.unshift({
+        mutProviders.unshift({
           url,
         });
         console.log('\n');
-        return providers;
+        return mutProviders;
       },
     );
     await Promise.all(upstreamProviderValidationPromises);

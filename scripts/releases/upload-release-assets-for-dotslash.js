@@ -19,7 +19,9 @@ const {
 const {
   FIRST_PARTY_DOTSLASH_FILES,
 } = require('./write-dotslash-release-asset-urls');
+// $FlowFixMe[untyped-import] TODO: add types for @octokit/rest
 const {Octokit} = require('@octokit/rest');
+const nullthrows = require('nullthrows');
 const path = require('path');
 const {parseArgs} = require('util');
 
@@ -71,7 +73,7 @@ async function main() {
 }
 
 async function uploadReleaseAssetsForDotSlash(
-  {version, token, releaseId, force = false, dryRun = false} /*: {
+  {version: versionArg, token, releaseId, force = false, dryRun = false} /*: {
     version: string,
     token: string,
     releaseId: string,
@@ -79,6 +81,7 @@ async function uploadReleaseAssetsForDotSlash(
     dryRun?: boolean,
   } */,
 ) /*: Promise<void> */ {
+  let version = versionArg;
   if (version.startsWith('v')) {
     version = version.substring(1);
   }
@@ -141,29 +144,31 @@ async function uploadReleaseAssetsForDotSlash(
         }
         uploadPromises.push(
           (async () => {
-            if (existingAssetsByName.has(targetReleaseAssetInfo.name)) {
-              if (!force) {
-                console.log(
-                  `[${targetReleaseAssetInfo.name}] Skipping existing release asset...`,
-                );
-                return;
-              }
-              if (dryRun) {
-                console.log(
-                  `[${targetReleaseAssetInfo.name}] Dry run: Not deleting existing release asset.`,
-                );
-              } else {
-                console.log(
-                  `[${targetReleaseAssetInfo.name}] Deleting existing release asset...`,
-                );
-                await octokit.repos.deleteReleaseAsset({
-                  owner: 'facebook',
-                  repo: 'react-native',
-                  asset_id: existingAssetsByName.get(
-                    targetReleaseAssetInfo.name,
-                  ).id,
-                });
-              }
+            const existingAsset = existingAssetsByName.get(
+              targetReleaseAssetInfo.name,
+            );
+            if (!existingAsset) {
+              return;
+            }
+            if (!force) {
+              console.log(
+                `[${targetReleaseAssetInfo.name}] Skipping existing release asset...`,
+              );
+              return;
+            }
+            if (dryRun) {
+              console.log(
+                `[${targetReleaseAssetInfo.name}] Dry run: Not deleting existing release asset.`,
+              );
+            } else {
+              console.log(
+                `[${targetReleaseAssetInfo.name}] Deleting existing release asset...`,
+              );
+              await octokit.repos.deleteReleaseAsset({
+                owner: 'facebook',
+                repo: 'react-native',
+                asset_id: existingAsset.id,
+              });
             }
             console.log(
               `[${targetReleaseAssetInfo.name}] Downloading from ${upstreamUrl}...`,
@@ -199,7 +204,7 @@ async function uploadReleaseAssetsForDotSlash(
               });
               const actualUrlPathname = new URL(browser_download_url).pathname;
               const actualAssetName = decodeURIComponent(
-                /[^/]*$/.exec(actualUrlPathname)[0],
+                nullthrows(/[^/]*$/.exec(actualUrlPathname))[0],
               );
               if (actualAssetName !== targetReleaseAssetInfo.name) {
                 throw new Error(

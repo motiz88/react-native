@@ -10,8 +10,10 @@
 
 'use strict';
 
+// $FlowFixMe[untyped-import] TODO(moti): publish types with dotslash package
 const dotslash = require('@motizilberman/dotslash');
 const {promises: fs} = require('fs');
+// $FlowFixMe[untyped-import] TODO: add types for jsonc-parser
 const {applyEdits, modify, parse} = require('jsonc-parser');
 const os = require('os');
 const path = require('path');
@@ -34,6 +36,7 @@ type DotSlashPlatformSpec = {
   hash: 'blake3' | 'sha256',
   digest: string,
   size: number,
+  format?: string,
   ...
 }
 
@@ -46,11 +49,11 @@ type JSONCFormattingOptions = {
 type DotSlashProvidersTransformFn = (
   providers: $ReadOnlyArray<DotSlashProvider>,
   suggestedFilename: string,
-  artifactInfo: $ReadOnlyArray<{
+  artifactInfo: $ReadOnly<{
     hash: 'blake3' | 'sha256',
     digest: string,
     size: number,
-  }>
+  }>,
 ) => ?$ReadOnlyArray<DotSlashProvider>;
 */
 
@@ -68,9 +71,9 @@ function sanitizeFileNameComponent(
 
 function splitShebangFromContents(
   contents /*: string */,
-) /*: [?string, string] */ {
+) /*: [string, string] */ {
   const shebangMatch = contents.match(/^#!.*\n/);
-  const shebang = shebangMatch ? shebangMatch[0] : null;
+  const shebang = shebangMatch ? shebangMatch[0] : '';
   const contentsWithoutShebang = shebang
     ? contents.substring(shebang.length)
     : contents;
@@ -103,7 +106,7 @@ async function processDotSlashFileInPlace(
     const providers = platformSpec.providers;
     const suggestedFilename =
       `${sanitizeFileNameComponent(json.name)}-${platform}` +
-      (platformSpec.format ? `.${platformSpec.format}` : '');
+      (platformSpec.format != null ? `.${platformSpec.format}` : '');
     const {hash, digest, size} = platformSpec;
     const newProviders =
       transformProviders(providers, suggestedFilename, {hash, digest, size}) ??
@@ -127,7 +130,7 @@ async function processDotSlashFileInPlace(
   }
 }
 
-async function validateAndParseDotSlashFile(filename /*: string */) /*: any */ {
+async function validateAndParseDotSlashFile(filename /*: string */) /*: mixed */ {
   const {stdout} = await execFile(dotslash, ['--', 'parse', filename]);
   return JSON.parse(stdout);
 }
